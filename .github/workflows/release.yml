@@ -1,10 +1,14 @@
 name: Publicar release
 
-# Ao enviar uma tag "v*", cria a release do GitHub e anexa o APK assinado
-# que está versionado em release/.
+# Cria a release do GitHub e anexa o APK assinado que está versionado em release/.
+# Roda ao enviar uma tag "v*", ao mudar o APK no branch de desenvolvimento,
+# ou manualmente (aba Actions → "Publicar release" → Run workflow).
 on:
   push:
     tags: ["v*"]
+    branches: ["claude/keen-heisenberg-1mbvfi"]
+    paths: ["release/**", ".github/workflows/release.yml"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,8 +21,16 @@ jobs:
       - name: Criar release com o APK
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            TAG="$GITHUB_REF_NAME"
+          else
+            # versão = versionName do app
+            TAG="v$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG já existe — nada a fazer."; exit 0
+          fi
           VERSION="${TAG#v}"
           APK="release/GravaEPrint-${VERSION}.apk"
           test -f "$APK" || { echo "APK $APK não encontrado"; exit 1; }
@@ -38,4 +50,4 @@ jobs:
           SHA-256: \`$(cut -d' ' -f1 "$APK.sha256")\`
           NOTES
           gh release create "$TAG" "$APK" "$APK.sha256" \
-            --title "Grava & Print ${VERSION}" --notes-file notes.md
+            --target "$GITHUB_SHA" --title "Grava & Print ${VERSION}" --notes-file notes.md
