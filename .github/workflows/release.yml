@@ -1,0 +1,41 @@
+name: Publicar release
+
+# Ao enviar uma tag "v*", cria a release do GitHub e anexa o APK assinado
+# que está versionado em release/.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar release com o APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          APK="release/GravaEPrint-${VERSION}.apk"
+          test -f "$APK" || { echo "APK $APK não encontrado"; exit 1; }
+          sha256sum "$APK" > "$APK.sha256"
+          cat > notes.md <<NOTES
+          ## Grava & Print ${VERSION}
+
+          Grava a tela do celular em vídeo e, durante a gravação, tira prints pelo botão flutuante, sem interromper o vídeo.
+
+          - Android 10 ou superior (minSdk 29, targetSdk 34)
+          - APK de release assinado
+
+          ### Instalar
+          1. Baixe o arquivo \`GravaEPrint-${VERSION}.apk\` abaixo, no celular.
+          2. Abra o arquivo e, se o Android pedir, permita "Instalar apps desconhecidos".
+
+          SHA-256: \`$(cut -d' ' -f1 "$APK.sha256")\`
+          NOTES
+          gh release create "$TAG" "$APK" "$APK.sha256" \
+            --title "Grava & Print ${VERSION}" --notes-file notes.md
