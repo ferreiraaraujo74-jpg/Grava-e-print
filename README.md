@@ -2,7 +2,7 @@
 
 App Android nativo (Kotlin + Jetpack Compose) que **grava a tela em vídeo e, durante a gravação, tira prints** tocando num botão flutuante, sem pausar nem interromper o vídeo.
 
-- **APK pronto:** [`release/GravaEPrint-1.0.apk`](release/GravaEPrint-1.0.apk) (assinado, v1.0)
+- **Baixar o APK:** [Grava & Print 1.0 — Releases](https://github.com/ferreiraaraujo74-jpg/Grava-e-print/releases/latest) (assinado; também em [`release/`](release/))
 - minSdk 29 (Android 10) · targetSdk 34 (Android 14)
 
 ## Instalar
@@ -64,5 +64,7 @@ keyAlias=gravaeprint
 keyPassword=...
 ```
 Sem esse arquivo, o build de release é assinado com a chave de debug.
+
+Para publicar uma nova versão: aumente `versionCode`/`versionName` em `app/build.gradle.kts`, coloque o APK em `release/GravaEPrint-<versão>.apk` e envie para o branch. O workflow `.github/workflows/release.yml` cria a release sozinho (também dá para rodar manualmente na aba Actions).
 
 > A chave de assinatura **não** está no repositório. Guarde o `.jks` e as senhas: atualizações do app precisam ser assinadas com a mesma chave.
