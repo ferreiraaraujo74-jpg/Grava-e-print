@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- rosto -->
+    <path android:fillColor="#FFFFC9A8"
+        android:pathData="M50,30a18,20 0 1,0 0.1,0z" />
+    <!-- olhos -->
+    <path android:fillColor="#FF1E2A44" android:pathData="M43,48m-2.6,0a2.6,2.6 0 1,0 5.2,0a2.6,2.6 0 1,0 -5.2,0" />
+    <path android:fillColor="#FF1E2A44" android:pathData="M57,48m-2.6,0a2.6,2.6 0 1,0 5.2,0a2.6,2.6 0 1,0 -5.2,0" />
+    <!-- boca aberta -->
+    <path android:fillColor="#FF7A1E2C" android:pathData="M43,57 Q50,69 57,57 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M44.5,57 L55.5,57 L55,59 L45,59 Z" />
+    <!-- ondas de fala -->
+    <path android:fillColor="#00000000" android:strokeColor="#FF5EEAD4" android:strokeWidth="3"
+        android:strokeLineCap="round" android:pathData="M74,42 Q79,50 74,58" />
+    <path android:fillColor="#00000000" android:strokeColor="#FF5EEAD4" android:strokeWidth="3"
+        android:strokeLineCap="round" android:pathData="M80,37 Q88,50 80,63" />
+</vector>

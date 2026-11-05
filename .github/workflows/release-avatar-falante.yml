@@ -1,0 +1,46 @@
+name: Publicar release (Avatar Falante)
+
+# Cria a release do app Avatar Falante com o APK assinado de avatar-falante/release/.
+# Tag: avatar-falante-v<versionName>. Roda quando o APK muda no branch ou manualmente.
+on:
+  push:
+    branches: ["claude/keen-heisenberg-1mbvfi"]
+    paths: ["avatar-falante/release/**", ".github/workflows/release-avatar-falante.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Criar release com o APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(grep -oP 'versionName = "\K[^"]+' avatar-falante/app/build.gradle.kts)"
+          TAG="avatar-falante-v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG já existe — nada a fazer."; exit 0
+          fi
+          APK="avatar-falante/release/AvatarFalante-${VERSION}.apk"
+          test -f "$APK" || { echo "APK $APK não encontrado"; exit 1; }
+          sha256sum "$APK" | sed 's#avatar-falante/release/##' > "$APK.sha256"
+          cat > notes.md <<NOTES
+          ## Avatar Falante ${VERSION}
+
+          Faça uma foto ou um personagem falar o que você quiser (texto com a voz do Android, sua voz gravada ou um arquivo de áudio) e gere um vídeo MP4. Grátis e offline.
+
+          - Android 10 ou superior (minSdk 29, targetSdk 34), celulares ARM
+          - APK de release assinado · funciona offline
+
+          ### Instalar
+          1. Baixe \`AvatarFalante-${VERSION}.apk\` abaixo, no celular.
+          2. Abra o arquivo e, se o Android pedir, permita "Instalar apps desconhecidos".
+
+          SHA-256: \`$(cut -d' ' -f1 "$APK.sha256")\`
+          NOTES
+          gh release create "$TAG" "$APK" "$APK.sha256" --target "$GITHUB_SHA" \
+            --title "Avatar Falante ${VERSION}" --notes-file notes.md --latest=false
