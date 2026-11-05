@@ -1,5 +1,7 @@
 # Grava & Print
 
+> Este repositório também tem o app **[Traço Mágico — Foto em Desenho](traco-magico/)**.
+
 App Android nativo (Kotlin + Jetpack Compose) que **grava a tela em vídeo e, durante a gravação, tira prints** tocando num botão flutuante, sem pausar nem interromper o vídeo.
 
 - **Baixar o APK:** [Grava & Print 1.0 — Releases](https://github.com/ferreiraaraujo74-jpg/Grava-e-print/releases/latest) (assinado; também em [`release/`](release/))

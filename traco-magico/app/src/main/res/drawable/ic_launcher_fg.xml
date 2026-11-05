@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- traço ondulado -->
+    <path android:fillColor="#00000000" android:strokeColor="#FF2A2633" android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M30,70 C38,52 46,78 54,60 C60,47 66,66 74,52" />
+    <!-- lápis -->
+    <path android:fillColor="#FF8B5CF6"
+        android:pathData="M64,30 L78,44 L56,66 L42,52 Z" />
+    <path android:fillColor="#FFF4C27A"
+        android:pathData="M42,52 L56,66 L38,72 Z" />
+    <path android:fillColor="#FF2A2633"
+        android:pathData="M38,72 L41.5,63 L46.5,68.5 Z" />
+    <path android:fillColor="#FFF472B6"
+        android:pathData="M64,30 L69,25 Q71,23 73,25 L83,35 Q85,37 83,39 L78,44 Z" />
+</vector>
