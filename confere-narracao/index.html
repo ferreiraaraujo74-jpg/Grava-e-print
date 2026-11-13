@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confere Narração</title>
+<style>
+  :root{
+    --bg:#121212; --card:#1e1e1e; --card2:#262626; --txt:#f2f2f2; --mut:#b5b5b5;
+    --lar:#ff7a1a; --verde:#2ecc71; --amar:#f1c40f; --verm:#ff4d4d; --borda:#333;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,Roboto,sans-serif;padding-bottom:80px}
+  header{background:var(--lar);color:#111;padding:10px 12px;position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px}
+  header .tit{flex:1;min-width:0}
+  header h1{margin:0;font-size:20px}
+  header p{margin:2px 0 0;font-size:13px}
+  .fonte{display:flex;gap:6px;align-items:center}
+  .fonte button{width:46px;height:42px;border-radius:10px;border:2px solid #111;background:#111;color:#fff;font-weight:800;font-size:17px}
+  nav{display:flex;gap:6px;padding:10px 12px;background:#181818;border-bottom:1px solid var(--borda)}
+  nav button{flex:1;padding:10px 4px;border-radius:10px;border:1px solid var(--borda);background:var(--card);color:var(--txt);font-weight:700;font-size:15px}
+  nav button.on{background:var(--lar);color:#111;border-color:var(--lar)}
+  main{padding:12px;max-width:1100px;margin:0 auto}
+  .sec{display:none}.sec.on{display:block}
+  textarea{width:100%;background:var(--card2);color:var(--txt);border:1px solid var(--borda);border-radius:10px;padding:10px;font:inherit;font-size:1em}
+  .btn{padding:11px 14px;border-radius:10px;border:none;background:var(--lar);color:#111;font-weight:700;font-size:15px}
+  .btn.sec2{background:var(--card2);color:var(--txt);border:1px solid var(--borda)}
+  .btn.grande{width:100%;padding:16px;font-size:19px;font-weight:800;margin:8px 0 4px;box-shadow:0 0 0 3px rgba(255,122,26,.25)}
+  .btn.mic{background:#2b2b2b;color:#fff;border:2px solid var(--lar);box-shadow:none}
+  .btn.mic.on{background:var(--verm);border-color:var(--verm);animation:pulsa 1.2s infinite}
+  @keyframes pulsa{50%{opacity:.75}}
+  .row{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:12px;margin:0 0 14px}
+  .fala{font-size:.9em;color:var(--mut);background:#191919;border-left:3px solid #555;padding:8px;border-radius:6px;margin:6px 0}
+  .fala b{color:#ddd}
+  .narr{border-left:3px solid var(--lar);background:#231a12;padding:8px;border-radius:6px;margin:8px 0}
+  .lbl{font-size:.8em;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:10px 0 4px}
+  .res{margin-top:10px;padding:12px;border-radius:10px;background:#191919;border:1px solid var(--borda)}
+  .nota{display:inline-block;padding:6px 14px;border-radius:20px;font-weight:800;color:#111;font-size:1.1em}
+  .v{background:var(--verde)}.a{background:var(--amar)}.r{background:var(--verm);color:#fff}
+  .frase{font-size:1.05em;margin:10px 0 4px;font-weight:600}
+  .det{margin:6px 0 0;padding-left:20px;color:var(--mut);font-size:.92em}
+  .det li{margin:3px 0}
+  .diff{line-height:1.9}
+  .diff span{padding:0 2px;border-radius:3px}
+  .falt{background:#5a1f1f;text-decoration:line-through;color:#ffb3b3}
+  .extra{background:#5a4d10;color:#ffe680}
+  .ok{color:#cfe9d8}
+  details{margin-top:8px}
+  summary{color:var(--mut);font-size:.92em}
+  .help{font-size:.9em;color:var(--mut)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9;font-size:14px;max-width:90%}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:8;padding:12px}
+  .opt{padding:8px 12px 0;max-width:1100px;margin:0 auto;font-size:.95em}
+  .opt label{display:flex;gap:8px;align-items:center}
+  .opt input{width:22px;height:22px;accent-color:var(--lar)}
+  .modal .box{background:var(--card);border-radius:14px;padding:14px;width:100%;max-width:560px}
+</style>
+</head>
+<body>
+<header>
+  <div class="tit">
+    <h1>🎙️ Confere Narração</h1>
+    <p>A narração combina com o roteiro?</p>
+  </div>
+  <div class="fonte">
+    <button id="fMenos" aria-label="Diminuir letras">A−</button>
+    <button id="fMais" aria-label="Aumentar letras">A+</button>
+  </div>
+</header>
+<nav>
+  <button data-t="roteiro" class="on">1. Roteiro</button>
+  <button data-t="gravar">2. Narrar</button>
+  <button data-t="livre">3. Livre</button>
+</nav>
+<div class="opt"><label><input type="checkbox" id="optAud"> 💾 Gravar também o áudio da voz (para usar no vídeo)</label></div>
+<main>
+
+<section id="roteiro" class="sec on">
+  <div class="card">
+    <div class="lbl">Cole o roteiro aqui</div>
+    <p class="help">Formato: <b>Fala, Transcrição N (início – fim)</b> com o texto embaixo, e <b>Narração</b> com o texto embaixo. Narração entre [colchetes] também funciona. Se colar só um texto solto, ele abre no modo <b>Livre</b>.</p>
+    <p class="help">⚠️ Aqui é só o texto. Para gravar sua voz, use o botão <b>🎙 Gravar</b> da próxima tela, não o microfone do teclado.</p>
+    <textarea id="txtRoteiro" rows="12" placeholder="Fala, Transcrição 1 (8:22 – 8:35)&#10;&quot;Disseram que não vão mais comprar comigo...&quot;&#10;&#10;Narração&#10;Olha, esse aí começou com classe."></textarea>
+    <div class="row">
+      <button class="btn" id="btnCarregar">Carregar roteiro</button>
+      <button class="btn sec2" id="btnLimpar">Apagar tudo</button>
+    </div>
+    <p id="resumoCarga" class="help"></p>
+  </div>
+</section>
+
+<section id="gravar" class="sec">
+  <div class="card help">
+    <b>Como usar:</b> em cada narração, toque em <b>🎙 Gravar</b> e leia o texto em voz alta. Quando tocar em <b>⏹ Parar</b>, o app confere sozinho.
+  </div>
+  <div id="lista"></div>
+</section>
+
+<section id="livre" class="sec">
+  <div class="card">
+    <p class="help">Cole o texto, toque em <b>🎙 Gravar</b> e leia em voz alta. Quando tocar em <b>⏹ Parar</b>, o app mostra o que você falou diferente.</p>
+    <div class="lbl">Texto para ler</div>
+    <textarea id="lRot" rows="6" placeholder="Cole aqui o texto da narração"></textarea>
+    <button class="btn grande mic" id="lGravar">🎙 Gravar</button>
+    <div class="lbl">O que você falou</div>
+    <textarea id="lNarr" rows="4" placeholder="Aparece aqui sozinho quando você grava"></textarea>
+    <button class="btn grande" id="lConferir">✔ Conferir</button>
+    <div id="lRes"></div>
+    <div id="lAud"></div>
+    <details>
+      <summary>Falas do vídeo (opcional, para conferir o contexto)</summary>
+      <div class="lbl">Fala de antes</div>
+      <textarea id="lAntes" rows="3" placeholder="O que a pessoa fala antes da sua narração"></textarea>
+      <div class="lbl">Fala de depois</div>
+      <textarea id="lDepois" rows="3" placeholder="O que a pessoa fala depois da sua narração"></textarea>
+    </details>
+    <div class="row">
+      <button class="btn sec2" id="lIA">Copiar pergunta pra IA</button>
+      <button class="btn sec2" id="lLimpar">Limpar</button>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <div class="lbl">Pergunta pronta para a IA</div>
+    <p class="help">Se a cópia automática não funcionou, segure o texto, selecione tudo e copie.</p>
+    <textarea id="txtPrompt" rows="12" readonly></textarea>
+    <div class="row"><button class="btn" id="fecharModal">Fechar</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+
+  // ---------- armazenamento seguro ----------
+  const KEY='confere-narracao-v1', KFONTE='confere-narracao-fonte', KLIVRE='confere-narracao-livre';
+  function guarda(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  function pega(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
+  let estado = pega(KEY) || { bruto:'', blocos:[] };
+  if(!Array.isArray(estado.blocos)) estado.blocos=[];
+  const salvar = ()=>guarda(KEY, estado);
+
+  function toast(msg){
+    const t=$('toast'); t.textContent=msg; t.style.display='block';
+    clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display='none',3200);
+  }
+  function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  // ---------- tamanho das letras ----------
+  let fonte = Number(pega(KFONTE)) || 1;
+  function aplicaFonte(){
+    fonte = Math.min(1.8, Math.max(0.8, Math.round(fonte*10)/10));
+    document.body.style.zoom = fonte;
+    guarda(KFONTE, fonte);
+  }
+  $('fMais').onclick = ()=>{ fonte+=0.1; aplicaFonte(); toast('Letras: '+Math.round(fonte*100)+'%'); };
+  $('fMenos').onclick = ()=>{ fonte-=0.1; aplicaFonte(); toast('Letras: '+Math.round(fonte*100)+'%'); };
+  aplicaFonte();
+
+  // ---------- abas ----------
+  function abrirAba(t){
+    document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on', x.dataset.t===t));
+    document.querySelectorAll('.sec').forEach(x=>x.classList.toggle('on', x.id===t));
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll('nav button').forEach(b=> b.onclick = ()=>abrirAba(b.dataset.t));
+
+  // ---------- leitura do roteiro ----------
+  const reFala = /fala\s*,?\s*(?:transcri[cç][aã]o\s*(\d+))?\s*\(\s*([\d:]+)\s*[–—-]\s*([\d:]+)\s*\)/i;
+  const reNarr = /^\s*\**\s*narra[cç][aã]o\s*\**\s*:?\s*(.*)$/i;
+  function parse(txt){
+    const blocos=[]; let atual=null;
+    const fecha=()=>{ if(atual){ atual.texto=atual.texto.trim().replace(/^["“”]+|["“”]+$/g,''); blocos.push(atual); atual=null; } };
+    for(const raw of txt.split(/\r?\n/)){
+      const l = raw.replace(/\*\*/g,'').trim();
+      if(!l) continue;
+      const mf = l.match(reFala);
+      if(mf){
+        fecha();
+        const resto = l.slice(l.indexOf(mf[0])+mf[0].length).replace(/^[\s:–-]+/,'');
+        atual={tipo:'fala', trans:mf[1]||'', ini:mf[2], fim:mf[3], texto:resto};
+        continue;
+      }
+      const mn = l.match(reNarr);
+      if(mn){ fecha(); atual={tipo:'narr', texto:mn[1]||'', falado:'', res:null}; continue; }
+      if(/^\[.*\]$/.test(l)){ fecha(); blocos.push({tipo:'narr', texto:l.slice(1,-1).trim(), falado:'', res:null}); continue; }
+      if(atual) atual.texto += (atual.texto?' ':'') + l;
+    }
+    fecha();
+    return blocos.filter(b=>b.tipo==='fala' || b.texto);
+  }
+
+  $('txtRoteiro').value = estado.bruto || '';
+  $('btnCarregar').onclick = ()=>{
+    const bruto=$('txtRoteiro').value;
+    if(!bruto.trim()){ toast('Cole o roteiro primeiro'); return; }
+    const novos=parse(bruto);
+    if(!novos.length){
+      // texto solto: vai para o modo livre, pronto para gravar
+      $('lRot').value = bruto.trim(); $('lNarr').value=''; $('lRes').innerHTML=''; salvaLivre();
+      abrirAba('livre');
+      toast('Agora toque em 🎙 Gravar e leia o texto');
+      return;
+    }
+    const antigas={};
+    estado.blocos.forEach(b=>{ if(b.tipo==='narr' && b.falado) antigas[b.texto]=b; });
+    novos.forEach(b=>{ if(b.tipo==='narr' && antigas[b.texto]) b.falado=antigas[b.texto].falado; });
+    estado.bruto=bruto; estado.blocos=novos; salvar();
+    resumoCarga(); renderLista();
+    const n=novos.filter(b=>b.tipo==='narr').length;
+    toast(n ? n+' narrações carregadas' : 'Nenhuma narração encontrada');
+    if(n) abrirAba('gravar');
+  };
+  $('btnLimpar').onclick = ()=>{
+    const B=$('btnLimpar');
+    if(B.dataset.conf!=='1'){ B.dataset.conf='1'; B.textContent='Toque de novo para apagar'; setTimeout(()=>{ B.dataset.conf=''; B.textContent='Apagar tudo'; },3000); return; }
+    estado={bruto:'',blocos:[]}; salvar();
+    $('txtRoteiro').value=''; B.dataset.conf=''; B.textContent='Apagar tudo';
+    resumoCarga(); renderLista(); toast('Tudo apagado');
+  };
+  function resumoCarga(){
+    const f=estado.blocos.filter(b=>b.tipo==='fala').length, n=estado.blocos.filter(b=>b.tipo==='narr').length;
+    $('resumoCarga').textContent = estado.blocos.length ? `Carregado: ${f} falas e ${n} narrações. Vá para "2. Narrar".` : '';
+  }
+
+  // ---------- palavras ----------
+  const nums={'0':'zero','1':'um','2':'dois','3':'tres','4':'quatro','5':'cinco','6':'seis','7':'sete','8':'oito','9':'nove','10':'dez','20':'vinte','30':'trinta','100':'cem'};
+  const equiv={pra:'para',pras:'para as',pro:'para o',pros:'para os',ta:'esta',to:'estou',tao:'estao',tava:'estava',ce:'voce',vc:'voce',tb:'tambem',hum:'',ih:'',ne:'nao e'};
+  function norm(t){ return (t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,''); }
+  function palavras(t){
+    let s=norm(t).replace(/(\d+)/g,m=>' '+(nums[m]||m)+' ').replace(/[^a-z0-9\s]/g,' ');
+    const out=[];
+    s.split(/\s+/).filter(Boolean).forEach(w=>{
+      const e=(w in equiv)?equiv[w]:w;
+      e.split(' ').filter(Boolean).forEach(x=>out.push(x));
+    });
+    return out;
+  }
+  const PARADAS=new Set(('a o as os um uma uns umas de do da dos das em no na nos nas por pelo pela pelos pelas para com sem que se e ou mas mais menos muito muita muitos muitas ja nao sim isso esse essa esses essas este esta estes estas aquele aquela aquilo ele ela eles elas eu voce voces nos me te lhe seu sua seus suas meu minha meus minhas foi ser sao era ter tem tinha estao estava vai vou ver olha aqui ali la entao quando onde como porque tambem gente pois agora hoje so tudo todo toda todos todas coisa cara ai ate depois antes ainda bem vez outro outra mesmo mesma dizer disse fala falou falar sobre qual quem num numa dele dela deles delas ao aos esta estou fica ficou fazer fez faz dar deu vem veio pode porque assim tipo ne ta pra pro ha the').split(' '));
+  function raiz(w){ return w.length>5 ? w.slice(0,5) : w; }
+  function chaves(t){
+    const set=new Set();
+    palavras(t).forEach(w=>{ if(w.length>3 && !PARADAS.has(w) && !/^\d+$/.test(w)) set.add(raiz(w)); });
+    return set;
+  }
+  function mostraveis(t, raizes){
+    const vistos=new Set(), out=[];
+    (t||'').split(/[^\p{L}\p{N}]+/u).forEach(w=>{
+      const r=raiz(norm(w)); if(raizes.has(r) && !vistos.has(r) && w.length>3){ vistos.add(r); out.push(w.toLowerCase()); }
+    });
+    return out.slice(0,4);
+  }
+
+  // ---------- comparação de leitura (texto x falado) ----------
+  function compara(roteiro, falado){
+    const A=palavras(roteiro), B=palavras(falado), n=A.length, m=B.length;
+    const dp=Array.from({length:n+1},()=>new Uint16Array(m+1));
+    for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--)
+      dp[i][j] = A[i]===B[j] ? dp[i+1][j+1]+1 : Math.max(dp[i+1][j],dp[i][j+1]);
+    const ops=[]; let i=0,j=0;
+    while(i<n && j<m){
+      if(A[i]===B[j]){ ops.push(['ok',A[i]]); i++; j++; }
+      else if(dp[i+1][j]>=dp[i][j+1]){ ops.push(['falt',A[i]]); i++; }
+      else { ops.push(['extra',B[j]]); j++; }
+    }
+    while(i<n) ops.push(['falt',A[i++]]);
+    while(j<m) ops.push(['extra',B[j++]]);
+    const certas=dp[0][0], extras=m-certas;
+    const nota = n ? Math.max(0,(certas-extras*0.5)/n) : 0;
+    return {ops, total:n, certas, faltou:n-certas, extras, nota};
+  }
+
+  // ---------- conferência de contexto ----------
+  const CTA=/\b(inscrev|inscreve|like|curt|coment|sininho|compartilh|ativa o|deixa o|vota|enquete)/;
+  const DEMONS=/\b(esse|essa|isso|esse ai|essa ai|ele|ela|aqui|ai|olha|perai|ih|nossa)\b/;
+
+  function repetido(t){
+    const w=palavras(t);
+    if(w.length>=16){
+      const meio=Math.floor(w.length/2);
+      const r=compara(w.slice(0,meio).join(' '), w.slice(meio).join(' '));
+      if(r.total && r.certas/r.total>0.7) return 'O texto está repetido: parece que foi colado ou ditado duas vezes.';
+    }
+    const frases=(t||'').split(/[.!?]+/).map(s=>palavras(s).join(' ')).filter(s=>s.split(' ').length>=5);
+    const vistas=new Set();
+    for(const f of frases){ if(vistas.has(f)) return 'Tem uma frase repetida.'; vistas.add(f); }
+    return '';
+  }
+
+  function nomesForaDasFalas(narr, falasTxt){
+    const base=chaves(falasTxt), nomes=[];
+    (narr||'').split(/(?<=[.!?:])\s+/).forEach(fr=>{
+      const ws=fr.split(/\s+/).map(w=>w.replace(/[^\p{L}\p{N}-]/gu,'')).filter(Boolean);
+      ws.forEach((w,k)=>{
+        if(k===0) return;
+        if(/^\p{Lu}\p{Ll}{2,}/u.test(w)){
+          const r=raiz(norm(w));
+          if(!PARADAS.has(norm(w)) && !base.has(r) && !nomes.includes(w)) nomes.push(w);
+        }
+      });
+    });
+    return nomes.slice(0,3);
+  }
+  function numerosNovos(narr, falasTxt){
+    const nf=new Set((falasTxt||'').match(/\d+/g)||[]);
+    return [...new Set((narr||'').match(/\d+/g)||[])].filter(x=>!nf.has(x)).slice(0,3);
+  }
+
+  // narr: texto a conferir; antes/depois: falas (podem ser vazias); roteiro: texto que devia ser lido (opcional)
+  function confere(narr, antes, depois, roteiro){
+    const det=[]; let nivel=2; let frase='';
+    const temAntes=!!(antes&&antes.trim()), temDepois=!!(depois&&depois.trim());
+    const temLeitura=!!(roteiro && roteiro.trim() && narr.trim()!==roteiro.trim());
+    const kN=chaves(narr), kA=chaves(antes), kD=chaves(depois);
+    const comA=[...kN].filter(x=>kA.has(x)), comD=[...kN].filter(x=>kD.has(x));
+    const nPal=palavras(narr).length;
+    const ehCTA = CTA.test(norm(narr)) && nPal<=25;
+    const reacaoCurta = nPal<=14 && DEMONS.test(norm(narr));
+    const ligaA = comA.length>0 || (reacaoCurta && temAntes);
+    const ligaD = comD.length>0;
+
+    if(temAntes) det.push(ligaA ? (comA.length ? `Liga com a fala de antes (${mostraveis(narr,new Set(comA)).join(', ')}).` : 'Comentário curto sobre a fala de antes.') : 'Não tem nada em comum com a fala de antes.');
+    if(temDepois) det.push(ligaD ? `Prepara a fala de depois (${mostraveis(narr,new Set(comD)).join(', ')}).` : 'Não prepara a fala de depois.');
+
+    if(ehCTA){
+      det.length=0;
+      frase='É uma chamada pro público (inscrição, like ou comentário), não precisa ligar com as falas.';
+    } else if(reacaoCurta && ligaA){
+      det.length=0; det.push('Comentário curto sobre a fala de antes.');
+      frase='Reação curta que comenta o que a pessoa acabou de falar.';
+    } else if(temAntes || temDepois){
+      const ok = (temAntes?ligaA:true) && (temDepois?ligaD:true);
+      if(ok){ frase='A narração combina com o que vem antes e depois.'; }
+      else if(ligaA || ligaD){
+        nivel=1;
+        frase = !ligaA && temAntes ? 'Ela não comenta o que a pessoa acabou de falar. Puxe algo da fala de antes.' : 'Ela não prepara a próxima fala. Dê uma pista do que vem a seguir.';
+      } else {
+        nivel=0;
+        frase='A narração fala de outro assunto: não tem ligação com a fala de antes nem com a de depois.';
+      }
+      const falas=(antes||'')+' '+(depois||'');
+      const nomes=nomesForaDasFalas(narr,falas);
+      if(nomes.length) det.push(`Cita ${nomes.join(', ')}, que não aparece nas falas. Confira se está certo.`);
+      const nn=numerosNovos(narr,falas);
+      if(nn.length) det.push(`O número ${nn.join(', ')} não aparece nas falas. Confira a fonte.`);
+    } else if(!temLeitura){
+      frase='Sem as falas do vídeo não dá para conferir o contexto. Conferi só repetição e clareza.';
+      det.push('Para conferir sua voz, toque em 🎙 Gravar e leia o texto.');
+    }
+
+    let leitura=null;
+    if(temLeitura){
+      leitura=compara(roteiro,narr);
+      const p=Math.round(leitura.nota*100);
+      const falt=[...new Set(leitura.ops.filter(o=>o[0]==='falt').map(o=>o[1]))].slice(0,8);
+      const ext=[...new Set(leitura.ops.filter(o=>o[0]==='extra').map(o=>o[1]))].slice(0,8);
+      const extra=[];
+      extra.push(`Leitura ${p}% igual ao texto.`);
+      if(falt.length) extra.push('Faltou falar: '+falt.join(', ')+'.');
+      if(ext.length) extra.push('Falou a mais ou diferente: '+ext.join(', ')+'.');
+      det.unshift(...extra);
+      if(!temAntes && !temDepois && !ehCTA){
+        if(p>=95) frase = (falt.length||ext.length) ? 'Quase perfeito! Só pequenas diferenças.' : 'Você leu certinho! 👏';
+        else if(p>=80){ frase='Leitura boa, só alguns detalhes diferentes.'; nivel=Math.min(nivel,1); }
+        else { frase='Você falou bem diferente do texto. Veja abaixo o que mudou.'; nivel=Math.min(nivel,1); }
+      } else if(p<80){
+        nivel=Math.min(nivel,1);
+        if(frase.startsWith('A narração combina')) frase='O sentido combina, mas você falou bem diferente do roteiro.';
+      }
+    }
+
+    const rep=repetido(narr);
+    if(rep){ nivel=Math.min(nivel,1); frase=rep+' Apague a parte repetida.'; }
+    const longas=(narr||'').split(/[.!?]+/).filter(s=>palavras(s).length>40).length;
+    if(longas && !temLeitura) det.push('Tem frase muito comprida. Quebre em frases menores pra ficar mais fácil de falar.');
+
+    return {nivel, frase, det, leitura};
+  }
+
+  function htmlRes(r){
+    const rot=['Fora do contexto','Ajustar','Bom'][r.nivel], cl=['r','a','v'][r.nivel], ic=['✖','!','✔'][r.nivel];
+    let diff='';
+    if(r.leitura){
+      diff=`<details open><summary>Comparação com o texto</summary>
+        <div class="diff" style="margin-top:6px">${r.leitura.ops.map(([t,w])=>`<span class="${t}">${esc(w)}</span>`).join(' ')}</div>
+        <div class="help" style="margin-top:6px"><span class="falt">riscado</span> = faltou · <span class="extra">amarelo</span> = falou a mais ou diferente</div></details>`;
+    }
+    const dica = r.nivel<2 && !r.leitura ? `<p class="help" style="margin-top:8px">O app compara as palavras. Se você acha que está certo, toque em <b>Copiar pergunta pra IA</b> e cole no Claude para uma segunda opinião.</p>` : '';
+    return `<div class="res"><span class="nota ${cl}">${ic} ${rot}</span>
+      <div class="frase">${esc(r.frase)}</div>
+      <ul class="det">${r.det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>${diff}${dica}</div>`;
+  }
+
+  // ---------- gravação: confere a voz (reconhecimento do Chrome) e salva o áudio (WAV) ----------
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const KAUD='confere-narracao-audio';
+  let querAudio = pega(KAUD); if(querAudio===null) querAudio=true;
+  $('optAud').checked=!!querAudio;
+  $('optAud').onchange=e=>{ querAudio=e.target.checked; guarda(KAUD,querAudio); };
+
+  let G=null, rec=null, aud=null;
+
+  async function iniciaAudio(){
+    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}});
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const src=ctx.createMediaStreamSource(stream);
+    const proc=ctx.createScriptProcessor(4096,1,1);
+    const chunks=[];
+    proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    src.connect(proc); proc.connect(ctx.destination);
+    aud={ctx,stream,src,proc,chunks,rate:ctx.sampleRate};
+  }
+  function paraAudio(){
+    if(!aud) return null;
+    const a=aud; aud=null;
+    try{ a.src.disconnect(); a.proc.disconnect(); }catch(e){}
+    a.stream.getTracks().forEach(t=>t.stop());
+    try{ a.ctx.close(); }catch(e){}
+    const n=a.chunks.reduce((s,c)=>s+c.length,0);
+    if(n < a.rate*0.3) return null;
+    return wav(a.chunks,n,a.rate);
+  }
+  function wav(chunks,n,rate){
+    const buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+    const str=(o,s)=>{ for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+    str(0,'RIFF'); v.setUint32(4,36+n*2,true); str(8,'WAVE'); str(12,'fmt ');
+    v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+    v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+    str(36,'data'); v.setUint32(40,n*2,true);
+    let o=44;
+    chunks.forEach(c=>{ for(let i=0;i<c.length;i++){ const s=Math.max(-1,Math.min(1,c[i])); v.setInt16(o, s<0?s*0x8000:s*0x7fff, true); o+=2; } });
+    return new Blob([buf],{type:'audio/wav'});
+  }
+  function mostraAudio(alvo, blob){
+    const url=URL.createObjectURL(blob);
+    const d=new Date(), z=x=>String(x).padStart(2,'0');
+    const nome=`narracao-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}.wav`;
+    const mb=(blob.size/1048576).toFixed(1).replace('.',',');
+    alvo.innerHTML=`<div class="res"><div class="lbl">🔊 Áudio da sua voz (${mb} MB)</div>
+      <audio controls src="${url}" style="width:100%;margin-top:4px"></audio>
+      <div class="row"><a class="btn" href="${url}" download="${nome}" style="text-decoration:none">⬇ Baixar áudio</a>
+      <button class="btn sec2" data-a="share">📤 Compartilhar</button></div>
+      <p class="help">Arquivo WAV, abre no CapCut, InShot e outros editores. Baixe antes de fechar o app, senão o áudio some.</p></div>`;
+    alvo.querySelector('[data-a=share]').onclick=()=>{
+      try{
+        const f=new File([blob],nome,{type:'audio/wav'});
+        if(navigator.canShare && navigator.canShare({files:[f]})) navigator.share({files:[f],title:nome}).catch(()=>{});
+        else toast('Compartilhar não funciona aqui. Use o Baixar áudio.');
+      }catch(e){ toast('Compartilhar não funciona aqui. Use o Baixar áudio.'); }
+    };
+  }
+
+  async function gravar(ta, btn, onSave, onFim, alvo){
+    if(!G && !window.isSecureContext){ toast('Aberto pela pasta Downloads o Chrome bloqueia o microfone. Abra pelo link: ferreiraaraujo74-jpg.github.io/Grava-e-print/confere-narracao'); return; }
+    if(G){ G.parar=true; if(rec){ try{ rec.stop(); }catch(e){ finaliza(); } } else finaliza(); return; }
+    if(!SR && !querAudio){ toast('Este navegador não reconhece voz. Abra no Chrome ou use o microfone do teclado.'); return; }
+    G={ta,btn,onSave,onFim,alvo,fin:'',parar:false,srOk:!!SR};
+    ta.value=''; onSave(''); if(alvo) alvo.innerHTML='';
+    btn.textContent='⏹ Parar'; btn.classList.add('on');
+    if(querAudio){
+      try{ await iniciaAudio(); }
+      catch(e){ aud=null; toast('Não deu para gravar o áudio. Vou só conferir a voz.'); }
+    }
+    if(!G) return;
+    if(G.srOk){ try{ liga(); }catch(e){ G.srOk=false; rec=null; } }
+    if(!G.srOk && !aud){ finaliza(); toast('Não consegui ligar o microfone. Use o microfone do teclado.'); return; }
+    toast(aud && G.srOk ? 'Gravando o áudio e conferindo... pode ler' : aud ? 'Gravando só o áudio... pode ler' : 'Conferindo... pode ler o texto');
+  }
+  function liga(){
+    rec=new SR(); rec.lang='pt-BR'; rec.continuous=false; rec.interimResults=true;
+    rec.onresult=e=>{
+      if(!G) return;
+      let tmp='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const t=e.results[i][0].transcript;
+        if(e.results[i].isFinal) G.fin+=t+' '; else tmp+=t;
+      }
+      G.ta.value=(G.fin+tmp).trim(); G.onSave(G.ta.value);
+    };
+    rec.onerror=e=>{
+      if(!G) return;
+      if(['not-allowed','service-not-allowed'].includes(e.error)){
+        G.srOk=false; toast(aud ? 'O Chrome não deixou conferir a voz. Continuo gravando só o áudio.' : 'Microfone bloqueado. Toque no cadeado ao lado do endereço e permita o microfone.');
+      } else if(e.error==='network'){
+        G.srOk=false; toast('Sem internet: a conferência precisa de conexão.'+(aud?' Continuo gravando só o áudio.':''));
+      } else if(e.error==='audio-capture'){
+        G.srOk=false; toast(aud ? 'O Chrome não deixa gravar o áudio e conferir juntos. Continuo gravando só o áudio.' : 'Não achei o microfone.');
+      }
+    };
+    // o Chrome do celular para sozinho a cada pausa: religa até você tocar em Parar
+    rec.onend=()=>{
+      rec=null; if(!G) return;
+      if(!G.parar && G.srOk){ try{ liga(); return; }catch(e){ G.srOk=false; rec=null; } }
+      if(G.parar || !aud) finaliza();
+    };
+    rec.start();
+  }
+  function finaliza(){
+    if(!G) return;
+    const g=G; G=null;
+    if(rec){ try{ rec.abort(); }catch(e){} rec=null; }
+    g.btn.textContent='🎙 Gravar'; g.btn.classList.remove('on');
+    const blob=paraAudio();
+    if(blob && g.alvo) mostraAudio(g.alvo, blob);
+    g.ta.value=(g.fin.trim()||g.ta.value).trim(); g.onSave(g.ta.value);
+    if(g.ta.value) g.onFim();
+    else if(blob) toast('Áudio gravado! Para conferir o texto, desligue "Gravar também o áudio" e leia de novo.');
+    else toast('Não ouvi nada. Toque em Gravar e fale mais perto do microfone.');
+  }
+
+  // ---------- lista do roteiro ----------
+  function vizinhos(idx){
+    const bl=estado.blocos; let ant=null, prox=null;
+    for(let k=idx-1;k>=0;k--) if(bl[k].tipo==='fala'){ ant=bl[k]; break; }
+    for(let k=idx+1;k<bl.length;k++) if(bl[k].tipo==='fala'){ prox=bl[k]; break; }
+    return {ant,prox};
+  }
+  function falaHTML(f,rot){
+    if(!f) return `<div class="fala"><b>${rot}:</b> (nenhuma)</div>`;
+    return `<div class="fala"><b>${rot}, Transcrição ${f.trans||'?'} (${f.ini} – ${f.fim}):</b> ${esc(f.texto)||'<i>sem texto no roteiro</i>'}</div>`;
+  }
+  function renderLista(){
+    const L=$('lista'); L.innerHTML='';
+    const idxs=estado.blocos.map((b,i)=>b.tipo==='narr'?i:-1).filter(i=>i>=0);
+    if(!idxs.length){ L.innerHTML='<div class="card help">Nenhuma narração ainda. Cole o roteiro na aba 1 e toque em "Carregar roteiro", ou use a aba 3, Livre.</div>'; return; }
+    idxs.forEach((idx,num)=>{
+      const b=estado.blocos[idx], {ant,prox}=vizinhos(idx);
+      const c=document.createElement('div'); c.className='card'; c.id='c'+idx;
+      c.innerHTML=`
+        <div class="lbl">Narração ${num+1} de ${idxs.length}</div>
+        ${falaHTML(ant,'Antes')}
+        <div class="narr">${esc(b.texto)}</div>
+        ${falaHTML(prox,'Depois')}
+        <button class="btn grande mic" data-a="gravar">🎙 Gravar</button>
+        <div class="lbl">O que você falou</div>
+        <textarea rows="3" data-a="falado" placeholder="Aparece aqui sozinho quando você grava. Se deixar vazio, confiro o texto do roteiro.">${esc(b.falado||'')}</textarea>
+        <button class="btn grande" data-a="conferir">✔ Conferir</button>
+        <div id="r${idx}"></div>
+        <div id="a${idx}"></div>
+        <div class="row">
+          <button class="btn sec2" data-a="ia">Copiar pergunta pra IA</button>
+          <button class="btn sec2" data-a="zerar">Zerar</button>
+        </div>`;
+      L.appendChild(c);
+      const ta=c.querySelector('[data-a=falado]');
+      ta.oninput=e=>{ b.falado=e.target.value; salvar(); };
+      c.querySelector('[data-a=conferir]').onclick=()=>conferir(idx);
+      c.querySelector('[data-a=gravar]').onclick=e=>gravar(ta,e.currentTarget,v=>{ b.falado=v; salvar(); },()=>conferir(idx),$('a'+idx));
+      c.querySelector('[data-a=ia]').onclick=()=>{ copiarIA(ant&&ant.texto, b.texto, b.falado, prox&&prox.texto); };
+      c.querySelector('[data-a=zerar]').onclick=()=>{ b.falado=''; b.res=null; salvar(); renderLista(); $('c'+idx).scrollIntoView(); };
+      if(b.res) $('r'+idx).innerHTML=htmlRes(b.res);
+    });
+  }
+  function conferir(idx){
+    const b=estado.blocos[idx], {ant,prox}=vizinhos(idx);
+    const falado=(b.falado||'').trim();
+    b.res = confere(falado||b.texto, ant?ant.texto:'', prox?prox.texto:'', falado?b.texto:'');
+    salvar(); $('r'+idx).innerHTML=htmlRes(b.res);
+    $('r'+idx).scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
+  // ---------- modo livre ----------
+  const livre=pega(KLIVRE)||{};
+  $('lRot').value=livre.rot||''; $('lAntes').value=livre.antes||''; $('lNarr').value=livre.narr||''; $('lDepois').value=livre.depois||'';
+  function salvaLivre(){ guarda(KLIVRE,{rot:$('lRot').value, antes:$('lAntes').value, narr:$('lNarr').value, depois:$('lDepois').value}); }
+  ['lRot','lAntes','lNarr','lDepois'].forEach(id=>$(id).oninput=salvaLivre);
+  function conferirLivre(){
+    const rot=$('lRot').value.trim(), n=$('lNarr').value.trim();
+    if(!rot && !n){ toast('Cole o texto e toque em 🎙 Gravar'); return; }
+    $('lRes').innerHTML = htmlRes(n ? confere(n,$('lAntes').value,$('lDepois').value,rot) : confere(rot,$('lAntes').value,$('lDepois').value,''));
+    $('lRes').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  $('lConferir').onclick=conferirLivre;
+  $('lGravar').onclick=e=>{
+    if(!G && !$('lRot').value.trim()){ toast('Cole primeiro o texto que você vai ler'); return; }
+    $('lRes').innerHTML='';
+    gravar($('lNarr'), e.currentTarget, ()=>salvaLivre(), conferirLivre, $('lAud'));
+  };
+  $('lIA').onclick=()=>copiarIA($('lAntes').value,$('lRot').value,$('lNarr').value,$('lDepois').value);
+  $('lLimpar').onclick=()=>{ ['lRot','lAntes','lNarr','lDepois'].forEach(id=>$(id).value=''); $('lRes').innerHTML=''; salvaLivre(); };
+
+  // ---------- pergunta para IA ----------
+  function copiarIA(antes, roteiro, falado, depois){
+    const p=`Avalie a narração de um vídeo de react de notícias do YouTube.
+
+FALA ANTERIOR (vídeo original):
+"${(antes||'').trim()||'(nenhuma)'}"
+${roteiro?`
+NARRAÇÃO DO ROTEIRO:
+"${roteiro}"
+`:''}
+NARRAÇÃO QUE EU FIZ:
+"${(falado||'').trim()||'(ainda não gravei, avalie a do roteiro)'}"
+
+FALA SEGUINTE (vídeo original):
+"${(depois||'').trim()||'(nenhuma)'}"
+
+Responda curto, em tópicos:
+1. Nota: Bom, Ajustar ou Fora do contexto.
+2. A narração combina com a fala anterior e prepara a seguinte?
+3. Atribuí a alguém algo que ele não disse ou exagerei algum fato?
+4. Uma versão corrigida, só se precisar.`;
+    $('txtPrompt').value=p;
+    const abre=()=>{ $('modal').style.display='flex'; };
+    try{ navigator.clipboard.writeText(p).then(()=>toast('Pergunta copiada! Cole no Claude.'),abre); }catch(e){ abre(); }
+  }
+  $('fecharModal').onclick=()=>{ $('modal').style.display='none'; };
+
+  resumoCarga(); renderLista();
+})();
+</script>
+</body>
+</html>
