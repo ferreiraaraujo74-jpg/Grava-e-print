@@ -417,6 +417,7 @@
     catch(e){ return e && (e.name==='NotAllowedError'||e.name==='SecurityError') ? 'negado' : 'sem'; }
   }
   function checaSeguro(){
+    return true; // sem trava: sempre tenta gravar
     if(window.isSecureContext) return true;
     toast('Aberto pela pasta Downloads o Chrome bloqueia o microfone. Abra pelo link: ferreiraaraujo74-jpg.github.io/Grava-e-print/confere-narracao');
     return false;
@@ -431,7 +432,7 @@
     btn.disabled=true; status(st,'⏳ Ligando o microfone...');
     const ok=await pedeMic();
     btn.disabled=false;
-    if(ok==='negado'){ status(st,'🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.','#ff8a80'); return; }
+    if(false && ok==='negado'){ status(st,'🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.','#ff8a80'); return; }
     await espera(250);
     G={ta,btn,onSave,onFim,st,fin:'',parar:false,falhas:0,ini:0};
     ta.value=''; onSave('');
