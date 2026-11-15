@@ -92,7 +92,7 @@
 
 <section id="gravar" class="sec">
   <div class="card help">
-    <b>Como usar:</b> em cada narração, toque em <b>🎙 Gravar</b> e leia o texto em voz alta. Quando tocar em <b>⏹ Parar</b>, o app confere sozinho. Para ter o arquivo da sua voz pro vídeo, use o <b>💾 Gravar áudio</b> (o Chrome do celular não deixa fazer os dois juntos).
+    <b>Como usar:</b> em cada narração, toque em <b>🎙 Gravar</b> e leia o texto em voz alta. Se precisar, use <b>⏸ Pausar</b> e <b>▶ Continuar</b>. Quando tocar em <b>⏹ Parar</b>, o app confere sozinho. Para ter o arquivo da sua voz pro vídeo, use o <b>💾 Gravar áudio</b> (o Chrome do celular não deixa fazer os dois juntos).
   </div>
   <div id="lista"></div>
 </section>
@@ -105,6 +105,7 @@
     <div class="row">
       <button class="btn grande mic" id="lGravar">🎙 Gravar</button>
       <button class="btn sec2" id="lAudio">💾 Gravar áudio</button>
+      <button class="btn sec2" id="lPausa" style="display:none">⏸ Pausar</button>
     </div>
     <div class="st" id="lSt"></div>
     <div class="lbl">O que você falou</div>
@@ -423,8 +424,31 @@
     return false;
   }
 
+  // ===== ⏸ Pausar / ▶ Continuar (vale pro Gravar e pro Gravar áudio) =====
+  function mostraPausa(pb, on){ if(!pb) return; pb.style.display=on?'':'none'; pb.textContent='⏸ Pausar'; pb.classList.remove('on'); }
+  function pausar(pb){
+    if(G && G.pb===pb){
+      if(!G.pausado){
+        G.pausado=true; if(rec){ try{ rec.stop(); }catch(e){ rec=null; } }
+        pb.textContent='▶ Continuar'; pb.classList.add('on');
+        status(G.st,'⏸ Pausado. Toque em ▶ Continuar quando quiser.','#ffcc80');
+      } else {
+        G.pausado=false; G.falhas=0;
+        pb.textContent='⏸ Pausar'; pb.classList.remove('on');
+        status(G.st,'🔴 Ouvindo... pode continuar lendo','#ff8a80');
+        if(!rec) liga();
+      }
+      return;
+    }
+    if(A && A.pb===pb){
+      A.pausado=!A.pausado;
+      pb.textContent=A.pausado?'▶ Continuar':'⏸ Pausar'; pb.classList.toggle('on',A.pausado);
+      status(A.st, A.pausado?'⏸ Áudio pausado. Toque em ▶ Continuar quando quiser.':'🔴 Gravando o áudio... pode continuar', A.pausado?'#ffcc80':'#ff8a80');
+    }
+  }
+
   // ===== 🎙 Gravar = conferir pela voz =====
-  async function gravar(ta, btn, onSave, onFim, st){
+  async function gravar(ta, btn, onSave, onFim, st, pb){
     if(G){ G.parar=true; if(rec){ try{ rec.stop(); }catch(e){ finaliza(); } } else finaliza(); return; }
     if(A){ toast('Pare primeiro a gravação de áudio.'); return; }
     if(!checaSeguro()) return;
@@ -434,7 +458,8 @@
     btn.disabled=false;
     if(false && ok==='negado'){ status(st,'🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.','#ff8a80'); return; }
     await espera(250);
-    G={ta,btn,onSave,onFim,st,fin:'',parar:false,falhas:0,ini:0};
+    G={ta,btn,onSave,onFim,st,pb,fin:'',parar:false,pausado:false,falhas:0,ini:0};
+    mostraPausa(pb,true);
     ta.value=''; onSave('');
     btn.textContent='⏹ Parar'; btn.classList.add('on');
     status(st,'🔴 Ouvindo... pode ler o texto','#ff8a80');
@@ -467,9 +492,10 @@
     rec.onend=()=>{
       rec=null; if(!G) return;
       if(G.parar){ finaliza(); return; }
+      if(G.pausado) return;
       if(Date.now()-G.ini < 800) G.falhas++; else G.falhas=0;
       if(G.falhas>=6){ G.erro='O Chrome parou de ouvir. Toque em Gravar de novo.'; finaliza(); return; }
-      setTimeout(()=>{ if(G && !G.parar && !rec) comeca(); }, 300);
+      setTimeout(()=>{ if(G && !G.parar && !G.pausado && !rec) comeca(); }, 300);
     };
     comeca();
   }
@@ -484,7 +510,7 @@
     if(!G) return;
     const g=G; G=null;
     if(rec){ try{ rec.abort(); }catch(e){} rec=null; }
-    g.btn.textContent='🎙 Gravar'; g.btn.classList.remove('on');
+    g.btn.textContent='🎙 Gravar'; g.btn.classList.remove('on'); mostraPausa(g.pb,false);
     g.ta.value=(g.fin.trim()||g.ta.value).trim(); g.onSave(g.ta.value);
     if(g.erro){ status(g.st,g.erro,'#ff8a80'); }
     else if(g.ta.value){ status(g.st,''); g.onFim(); }
@@ -492,8 +518,8 @@
   }
 
   // ===== 💾 Gravar áudio = só o arquivo da voz (WAV) =====
-  async function gravaAudio(btn, alvo, st){
-    if(A){ const blob=paraAudio(); btn.textContent='💾 Gravar áudio'; btn.classList.remove('on'); status(st,''); if(blob) mostraAudio(alvo,blob); else toast('Gravação muito curta.'); return; }
+  async function gravaAudio(btn, alvo, st, pb){
+    if(A){ mostraPausa(A.pb,false); const blob=paraAudio(); btn.textContent='💾 Gravar áudio'; btn.classList.remove('on'); status(st,''); if(blob) mostraAudio(alvo,blob); else toast('Gravação muito curta.'); return; }
     if(G){ toast('Pare primeiro a conferência.'); return; }
     if(!checaSeguro()) return;
     try{
@@ -503,15 +529,15 @@
       const src=ctx.createMediaStreamSource(stream);
       const proc=ctx.createScriptProcessor(4096,1,1);
       const chunks=[];
-      proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      proc.onaudioprocess=e=>{ if(A && A.pausado) return; chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
       src.connect(proc); proc.connect(ctx.destination);
-      A={ctx,stream,src,proc,chunks,rate:ctx.sampleRate};
+      A={ctx,stream,src,proc,chunks,rate:ctx.sampleRate,pb,st,pausado:false};
     }catch(e){
       A=null;
       status(st, e && e.name==='NotAllowedError' ? '🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.' : '🎙 Não consegui ligar o microfone. Feche outros apps que usam o microfone.','#ff8a80');
       return;
     }
-    alvo.innerHTML='';
+    alvo.innerHTML=''; mostraPausa(pb,true);
     btn.textContent='⏹ Parar áudio'; btn.classList.add('on');
     status(st,'🔴 Gravando o áudio... pode ler','#ff8a80');
   }
@@ -581,6 +607,7 @@
         <div class="row">
           <button class="btn grande mic" data-a="gravar">🎙 Gravar</button>
           <button class="btn sec2" data-a="audio">💾 Gravar áudio</button>
+          <button class="btn sec2" data-a="pausa" style="display:none">⏸ Pausar</button>
         </div>
         <div class="st" id="s${idx}"></div>
         <div class="lbl">O que você falou</div>
@@ -596,8 +623,9 @@
       const ta=c.querySelector('[data-a=falado]');
       ta.oninput=e=>{ b.falado=e.target.value; salvar(); };
       c.querySelector('[data-a=conferir]').onclick=()=>conferir(idx);
-      c.querySelector('[data-a=gravar]').onclick=e=>gravar(ta,e.currentTarget,v=>{ b.falado=v; salvar(); },()=>conferir(idx),$('s'+idx));
-      c.querySelector('[data-a=audio]').onclick=e=>gravaAudio(e.currentTarget,$('a'+idx),$('s'+idx));
+      c.querySelector('[data-a=gravar]').onclick=e=>gravar(ta,e.currentTarget,v=>{ b.falado=v; salvar(); },()=>conferir(idx),$('s'+idx),c.querySelector('[data-a=pausa]'));
+      c.querySelector('[data-a=pausa]').onclick=e=>pausar(e.currentTarget);
+      c.querySelector('[data-a=audio]').onclick=e=>gravaAudio(e.currentTarget,$('a'+idx),$('s'+idx),c.querySelector('[data-a=pausa]'));
       c.querySelector('[data-a=ia]').onclick=()=>{ copiarIA(ant&&ant.texto, b.texto, b.falado, prox&&prox.texto); };
       c.querySelector('[data-a=zerar]').onclick=()=>{ b.falado=''; b.res=null; salvar(); renderLista(); $('c'+idx).scrollIntoView(); };
       if(b.res) $('r'+idx).innerHTML=htmlRes(b.res);
@@ -626,9 +654,10 @@
   $('lGravar').onclick=e=>{
     if(!G && !$('lRot').value.trim()){ toast('Cole primeiro o texto que você vai ler'); return; }
     $('lRes').innerHTML='';
-    gravar($('lNarr'), e.currentTarget, ()=>salvaLivre(), conferirLivre, $('lSt'));
+    gravar($('lNarr'), e.currentTarget, ()=>salvaLivre(), conferirLivre, $('lSt'), $('lPausa'));
   };
-  $('lAudio').onclick=e=>gravaAudio(e.currentTarget,$('lAud'),$('lSt'));
+  $('lAudio').onclick=e=>gravaAudio(e.currentTarget,$('lAud'),$('lSt'),$('lPausa'));
+  $('lPausa').onclick=e=>pausar(e.currentTarget);
   $('lIA').onclick=()=>copiarIA($('lAntes').value,$('lRot').value,$('lNarr').value,$('lDepois').value);
   $('lLimpar').onclick=()=>{ ['lRot','lAntes','lNarr','lDepois'].forEach(id=>$(id).value=''); $('lRes').innerHTML=''; salvaLivre(); };
 
