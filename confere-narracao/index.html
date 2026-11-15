@@ -51,6 +51,7 @@
   .help{font-size:.9em;color:var(--mut)}
   .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:20px;display:none;z-index:9;font-size:14px;max-width:90%}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:8;padding:12px}
+  .st{display:none;margin:8px 0 2px;font-weight:700;font-size:.95em}
   .opt{padding:8px 12px 0;max-width:1100px;margin:0 auto;font-size:.95em}
   .opt label{display:flex;gap:8px;align-items:center}
   .opt input{width:22px;height:22px;accent-color:var(--lar)}
@@ -73,7 +74,6 @@
   <button data-t="gravar">2. Narrar</button>
   <button data-t="livre">3. Livre</button>
 </nav>
-<div class="opt"><label><input type="checkbox" id="optAud"> 💾 Gravar também o áudio da voz (para usar no vídeo)</label></div>
 <main>
 
 <section id="roteiro" class="sec on">
@@ -92,7 +92,7 @@
 
 <section id="gravar" class="sec">
   <div class="card help">
-    <b>Como usar:</b> em cada narração, toque em <b>🎙 Gravar</b> e leia o texto em voz alta. Quando tocar em <b>⏹ Parar</b>, o app confere sozinho.
+    <b>Como usar:</b> em cada narração, toque em <b>🎙 Gravar</b> e leia o texto em voz alta. Quando tocar em <b>⏹ Parar</b>, o app confere sozinho. Para ter o arquivo da sua voz pro vídeo, use o <b>💾 Gravar áudio</b> (o Chrome do celular não deixa fazer os dois juntos).
   </div>
   <div id="lista"></div>
 </section>
@@ -102,7 +102,11 @@
     <p class="help">Cole o texto, toque em <b>🎙 Gravar</b> e leia em voz alta. Quando tocar em <b>⏹ Parar</b>, o app mostra o que você falou diferente.</p>
     <div class="lbl">Texto para ler</div>
     <textarea id="lRot" rows="6" placeholder="Cole aqui o texto da narração"></textarea>
-    <button class="btn grande mic" id="lGravar">🎙 Gravar</button>
+    <div class="row">
+      <button class="btn grande mic" id="lGravar">🎙 Gravar</button>
+      <button class="btn sec2" id="lAudio">💾 Gravar áudio</button>
+    </div>
+    <div class="st" id="lSt"></div>
     <div class="lbl">O que você falou</div>
     <textarea id="lNarr" rows="4" placeholder="Aparece aqui sozinho quando você grava"></textarea>
     <button class="btn grande" id="lConferir">✔ Conferir</button>
@@ -397,28 +401,122 @@
       <ul class="det">${r.det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>${diff}${dica}</div>`;
   }
 
-  // ---------- gravação: confere a voz (reconhecimento do Chrome) e salva o áudio (WAV) ----------
+  // ---------- microfone ----------
+  // O Chrome do Android não deixa conferir a voz e gravar o áudio AO MESMO TEMPO.
+  // Por isso são dois botões separados: 🎙 Gravar (confere) e 💾 Gravar áudio (arquivo WAV).
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  const KAUD='confere-narracao-audio';
-  let querAudio = pega(KAUD); if(querAudio===null) querAudio=true;
-  $('optAud').checked=!!querAudio;
-  $('optAud').onchange=e=>{ querAudio=e.target.checked; guarda(KAUD,querAudio); };
+  let G=null, rec=null, A=null;
+  const espera=ms=>new Promise(r=>setTimeout(r,ms));
 
-  let G=null, rec=null, aud=null;
+  function status(el, txt, cor){ if(!el) return; el.style.display=txt?'block':'none'; el.textContent=txt||''; el.style.color=cor||''; }
 
-  async function iniciaAudio(){
-    const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}});
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const src=ctx.createMediaStreamSource(stream);
-    const proc=ctx.createScriptProcessor(4096,1,1);
-    const chunks=[];
-    proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
-    src.connect(proc); proc.connect(ctx.destination);
-    aud={ctx,stream,src,proc,chunks,rate:ctx.sampleRate};
+  // pede a permissão do microfone de um jeito que o Chrome sempre mostra o aviso
+  async function pedeMic(){
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); return true; }
+    catch(e){ return e && (e.name==='NotAllowedError'||e.name==='SecurityError') ? 'negado' : 'sem'; }
+  }
+  function checaSeguro(){
+    if(window.isSecureContext) return true;
+    toast('Aberto pela pasta Downloads o Chrome bloqueia o microfone. Abra pelo link: ferreiraaraujo74-jpg.github.io/Grava-e-print/confere-narracao');
+    return false;
+  }
+
+  // ===== 🎙 Gravar = conferir pela voz =====
+  async function gravar(ta, btn, onSave, onFim, st){
+    if(G){ G.parar=true; if(rec){ try{ rec.stop(); }catch(e){ finaliza(); } } else finaliza(); return; }
+    if(A){ toast('Pare primeiro a gravação de áudio.'); return; }
+    if(!checaSeguro()) return;
+    if(!SR){ toast('Este navegador não reconhece voz. Abra o link no Google Chrome.'); status(st,'⚠️ Abra no Google Chrome para conferir pela voz.','#ff8a80'); return; }
+    btn.disabled=true; status(st,'⏳ Ligando o microfone...');
+    const ok=await pedeMic();
+    btn.disabled=false;
+    if(ok==='negado'){ status(st,'🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.','#ff8a80'); return; }
+    await espera(250);
+    G={ta,btn,onSave,onFim,st,fin:'',parar:false,falhas:0,ini:0};
+    ta.value=''; onSave('');
+    btn.textContent='⏹ Parar'; btn.classList.add('on');
+    status(st,'🔴 Ouvindo... pode ler o texto','#ff8a80');
+    liga();
+  }
+  function liga(){
+    if(!G) return;
+    try{
+      rec=new SR(); rec.lang='pt-BR'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+    }catch(e){ G.erro='Não consegui ligar o reconhecimento de voz.'; finaliza(); return; }
+    rec.onresult=e=>{
+      if(!G) return;
+      let tmp='';
+      for(let i=e.resultIndex;i<e.results.length;i++){
+        const t=e.results[i][0].transcript;
+        if(e.results[i].isFinal) G.fin+=t+' '; else tmp+=t;
+      }
+      G.falhas=0;
+      G.ta.value=(G.fin+tmp).trim(); G.onSave(G.ta.value);
+      status(G.st,'🔴 Ouvindo... ('+G.ta.value.split(/\s+/).filter(Boolean).length+' palavras)','#ff8a80');
+    };
+    rec.onerror=e=>{
+      if(!G) return;
+      if(['not-allowed','service-not-allowed'].includes(e.error)){ G.parar=true; G.erro='🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.'; }
+      else if(e.error==='network'){ G.parar=true; G.erro='📶 Sem internet: a conferência pela voz precisa de conexão.'; }
+      else if(e.error==='audio-capture'){ G.parar=true; G.erro='🎙 Outro app está usando o microfone (gravador de tela, WhatsApp, chamada). Feche e tente de novo.'; }
+      // 'no-speech' e 'aborted' são normais: ele só religa
+    };
+    // o Chrome do celular para sozinho a cada pausa: religa até você tocar em Parar
+    rec.onend=()=>{
+      rec=null; if(!G) return;
+      if(G.parar){ finaliza(); return; }
+      if(Date.now()-G.ini < 800) G.falhas++; else G.falhas=0;
+      if(G.falhas>=6){ G.erro='O Chrome parou de ouvir. Toque em Gravar de novo.'; finaliza(); return; }
+      setTimeout(()=>{ if(G && !G.parar && !rec) comeca(); }, 300);
+    };
+    comeca();
+  }
+  function comeca(){
+    if(!G) return;
+    if(!rec){ liga(); return; }
+    G.ini=Date.now();
+    try{ rec.start(); }
+    catch(e){ rec=null; G.falhas++; if(G.falhas>=6){ G.erro='Não consegui ligar o microfone.'; finaliza(); } else setTimeout(()=>{ if(G && !rec) liga(); },400); }
+  }
+  function finaliza(){
+    if(!G) return;
+    const g=G; G=null;
+    if(rec){ try{ rec.abort(); }catch(e){} rec=null; }
+    g.btn.textContent='🎙 Gravar'; g.btn.classList.remove('on');
+    g.ta.value=(g.fin.trim()||g.ta.value).trim(); g.onSave(g.ta.value);
+    if(g.erro){ status(g.st,g.erro,'#ff8a80'); }
+    else if(g.ta.value){ status(g.st,''); g.onFim(); }
+    else status(g.st,'🤔 Não ouvi nada. Fale mais perto do celular e toque em Gravar de novo.','#ffcc80');
+  }
+
+  // ===== 💾 Gravar áudio = só o arquivo da voz (WAV) =====
+  async function gravaAudio(btn, alvo, st){
+    if(A){ const blob=paraAudio(); btn.textContent='💾 Gravar áudio'; btn.classList.remove('on'); status(st,''); if(blob) mostraAudio(alvo,blob); else toast('Gravação muito curta.'); return; }
+    if(G){ toast('Pare primeiro a conferência.'); return; }
+    if(!checaSeguro()) return;
+    try{
+      const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}});
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      if(ctx.state==='suspended') await ctx.resume();
+      const src=ctx.createMediaStreamSource(stream);
+      const proc=ctx.createScriptProcessor(4096,1,1);
+      const chunks=[];
+      proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+      src.connect(proc); proc.connect(ctx.destination);
+      A={ctx,stream,src,proc,chunks,rate:ctx.sampleRate};
+    }catch(e){
+      A=null;
+      status(st, e && e.name==='NotAllowedError' ? '🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.' : '🎙 Não consegui ligar o microfone. Feche outros apps que usam o microfone.','#ff8a80');
+      return;
+    }
+    alvo.innerHTML='';
+    btn.textContent='⏹ Parar áudio'; btn.classList.add('on');
+    status(st,'🔴 Gravando o áudio... pode ler','#ff8a80');
   }
   function paraAudio(){
-    if(!aud) return null;
-    const a=aud; aud=null;
+    if(!A) return null;
+    const a=A; A=null;
     try{ a.src.disconnect(); a.proc.disconnect(); }catch(e){}
     a.stream.getTracks().forEach(t=>t.stop());
     try{ a.ctx.close(); }catch(e){}
@@ -456,64 +554,6 @@
     };
   }
 
-  async function gravar(ta, btn, onSave, onFim, alvo){
-    if(!G && !window.isSecureContext){ toast('Aberto pela pasta Downloads o Chrome bloqueia o microfone. Abra pelo link: ferreiraaraujo74-jpg.github.io/Grava-e-print/confere-narracao'); return; }
-    if(G){ G.parar=true; if(rec){ try{ rec.stop(); }catch(e){ finaliza(); } } else finaliza(); return; }
-    if(!SR && !querAudio){ toast('Este navegador não reconhece voz. Abra no Chrome ou use o microfone do teclado.'); return; }
-    G={ta,btn,onSave,onFim,alvo,fin:'',parar:false,srOk:!!SR};
-    ta.value=''; onSave(''); if(alvo) alvo.innerHTML='';
-    btn.textContent='⏹ Parar'; btn.classList.add('on');
-    if(querAudio){
-      try{ await iniciaAudio(); }
-      catch(e){ aud=null; toast('Não deu para gravar o áudio. Vou só conferir a voz.'); }
-    }
-    if(!G) return;
-    if(G.srOk){ try{ liga(); }catch(e){ G.srOk=false; rec=null; } }
-    if(!G.srOk && !aud){ finaliza(); toast('Não consegui ligar o microfone. Use o microfone do teclado.'); return; }
-    toast(aud && G.srOk ? 'Gravando o áudio e conferindo... pode ler' : aud ? 'Gravando só o áudio... pode ler' : 'Conferindo... pode ler o texto');
-  }
-  function liga(){
-    rec=new SR(); rec.lang='pt-BR'; rec.continuous=false; rec.interimResults=true;
-    rec.onresult=e=>{
-      if(!G) return;
-      let tmp='';
-      for(let i=e.resultIndex;i<e.results.length;i++){
-        const t=e.results[i][0].transcript;
-        if(e.results[i].isFinal) G.fin+=t+' '; else tmp+=t;
-      }
-      G.ta.value=(G.fin+tmp).trim(); G.onSave(G.ta.value);
-    };
-    rec.onerror=e=>{
-      if(!G) return;
-      if(['not-allowed','service-not-allowed'].includes(e.error)){
-        G.srOk=false; toast(aud ? 'O Chrome não deixou conferir a voz. Continuo gravando só o áudio.' : 'Microfone bloqueado. Toque no cadeado ao lado do endereço e permita o microfone.');
-      } else if(e.error==='network'){
-        G.srOk=false; toast('Sem internet: a conferência precisa de conexão.'+(aud?' Continuo gravando só o áudio.':''));
-      } else if(e.error==='audio-capture'){
-        G.srOk=false; toast(aud ? 'O Chrome não deixa gravar o áudio e conferir juntos. Continuo gravando só o áudio.' : 'Não achei o microfone.');
-      }
-    };
-    // o Chrome do celular para sozinho a cada pausa: religa até você tocar em Parar
-    rec.onend=()=>{
-      rec=null; if(!G) return;
-      if(!G.parar && G.srOk){ try{ liga(); return; }catch(e){ G.srOk=false; rec=null; } }
-      if(G.parar || !aud) finaliza();
-    };
-    rec.start();
-  }
-  function finaliza(){
-    if(!G) return;
-    const g=G; G=null;
-    if(rec){ try{ rec.abort(); }catch(e){} rec=null; }
-    g.btn.textContent='🎙 Gravar'; g.btn.classList.remove('on');
-    const blob=paraAudio();
-    if(blob && g.alvo) mostraAudio(g.alvo, blob);
-    g.ta.value=(g.fin.trim()||g.ta.value).trim(); g.onSave(g.ta.value);
-    if(g.ta.value) g.onFim();
-    else if(blob) toast('Áudio gravado! Para conferir o texto, desligue "Gravar também o áudio" e leia de novo.');
-    else toast('Não ouvi nada. Toque em Gravar e fale mais perto do microfone.');
-  }
-
   // ---------- lista do roteiro ----------
   function vizinhos(idx){
     const bl=estado.blocos; let ant=null, prox=null;
@@ -537,7 +577,11 @@
         ${falaHTML(ant,'Antes')}
         <div class="narr">${esc(b.texto)}</div>
         ${falaHTML(prox,'Depois')}
-        <button class="btn grande mic" data-a="gravar">🎙 Gravar</button>
+        <div class="row">
+          <button class="btn grande mic" data-a="gravar">🎙 Gravar</button>
+          <button class="btn sec2" data-a="audio">💾 Gravar áudio</button>
+        </div>
+        <div class="st" id="s${idx}"></div>
         <div class="lbl">O que você falou</div>
         <textarea rows="3" data-a="falado" placeholder="Aparece aqui sozinho quando você grava. Se deixar vazio, confiro o texto do roteiro.">${esc(b.falado||'')}</textarea>
         <button class="btn grande" data-a="conferir">✔ Conferir</button>
@@ -551,7 +595,8 @@
       const ta=c.querySelector('[data-a=falado]');
       ta.oninput=e=>{ b.falado=e.target.value; salvar(); };
       c.querySelector('[data-a=conferir]').onclick=()=>conferir(idx);
-      c.querySelector('[data-a=gravar]').onclick=e=>gravar(ta,e.currentTarget,v=>{ b.falado=v; salvar(); },()=>conferir(idx),$('a'+idx));
+      c.querySelector('[data-a=gravar]').onclick=e=>gravar(ta,e.currentTarget,v=>{ b.falado=v; salvar(); },()=>conferir(idx),$('s'+idx));
+      c.querySelector('[data-a=audio]').onclick=e=>gravaAudio(e.currentTarget,$('a'+idx),$('s'+idx));
       c.querySelector('[data-a=ia]').onclick=()=>{ copiarIA(ant&&ant.texto, b.texto, b.falado, prox&&prox.texto); };
       c.querySelector('[data-a=zerar]').onclick=()=>{ b.falado=''; b.res=null; salvar(); renderLista(); $('c'+idx).scrollIntoView(); };
       if(b.res) $('r'+idx).innerHTML=htmlRes(b.res);
@@ -580,8 +625,9 @@
   $('lGravar').onclick=e=>{
     if(!G && !$('lRot').value.trim()){ toast('Cole primeiro o texto que você vai ler'); return; }
     $('lRes').innerHTML='';
-    gravar($('lNarr'), e.currentTarget, ()=>salvaLivre(), conferirLivre, $('lAud'));
+    gravar($('lNarr'), e.currentTarget, ()=>salvaLivre(), conferirLivre, $('lSt'));
   };
+  $('lAudio').onclick=e=>gravaAudio(e.currentTarget,$('lAud'),$('lSt'));
   $('lIA').onclick=()=>copiarIA($('lAntes').value,$('lRot').value,$('lNarr').value,$('lDepois').value);
   $('lLimpar').onclick=()=>{ ['lRot','lAntes','lNarr','lDepois'].forEach(id=>$(id).value=''); $('lRes').innerHTML=''; salvaLivre(); };
 
