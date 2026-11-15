@@ -431,7 +431,7 @@
     btn.disabled=true; status(st,'⏳ Ligando o microfone...');
     const ok=await pedeMic();
     btn.disabled=false;
-    if(ok==='negado'){ status(st,'🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.','#ff8a80'); return; }
+    if(ok==='negado'){ status(st,'🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.','#ff8a80'); return; }
     await espera(250);
     G={ta,btn,onSave,onFim,st,fin:'',parar:false,falhas:0,ini:0};
     ta.value=''; onSave('');
@@ -457,7 +457,7 @@
     };
     rec.onerror=e=>{
       if(!G) return;
-      if(['not-allowed','service-not-allowed'].includes(e.error)){ G.parar=true; G.erro='🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.'; }
+      if(['not-allowed','service-not-allowed'].includes(e.error)){ G.parar=true; G.erro='🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.'; }
       else if(e.error==='network'){ G.parar=true; G.erro='📶 Sem internet: a conferência pela voz precisa de conexão.'; }
       else if(e.error==='audio-capture'){ G.parar=true; G.erro='🎙 Outro app está usando o microfone (gravador de tela, WhatsApp, chamada). Feche e tente de novo.'; }
       // 'no-speech' e 'aborted' são normais: ele só religa
@@ -507,7 +507,7 @@
       A={ctx,stream,src,proc,chunks,rate:ctx.sampleRate};
     }catch(e){
       A=null;
-      status(st, e && e.name==='NotAllowedError' ? '🔒 Microfone bloqueado. Toque no cadeado ao lado do endereço → Permissões → Microfone → Permitir.' : '🎙 Não consegui ligar o microfone. Feche outros apps que usam o microfone.','#ff8a80');
+      status(st, e && e.name==='NotAllowedError' ? '🔒 Microfone bloqueado. 1) Toque no ícone ao lado do endereço → Permissões → Microfone → Permitir. 2) Se continuar: Configurações do celular → Apps → Chrome → Permissões → Microfone → Permitir. Depois atualize a página.' : '🎙 Não consegui ligar o microfone. Feche outros apps que usam o microfone.','#ff8a80');
       return;
     }
     alvo.innerHTML='';
